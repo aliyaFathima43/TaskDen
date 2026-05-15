@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../api";
+import { supabase } from "../supabaseClient";
 import { applyTheme, getInitialTheme, toggleTheme } from "../theme";
 
-function LoginPage() {
-  const [username, setUsername] = useState("");
+function Login() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,16 +20,22 @@ function LoginPage() {
     setIsSubmitting(true);
     setErrorMessage("");
 
-    try {
-      const response = await loginUser({ username, password });
-      localStorage.setItem("todo_token", response.data.token);
-      localStorage.setItem("todo_user", JSON.stringify(response.data.user));
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Login failed");
-    } finally {
-      setIsSubmitting(false);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      const message = error.message.toLowerCase().includes("email not confirmed")
+        ? "Email confirmation is still enabled in Supabase. Disable Confirm email in your Supabase Auth settings, then create/login normally."
+        : error.message;
+      setErrorMessage(message);
+      return;
     }
+
+    navigate("/dashboard", { replace: true });
   };
 
   return (
@@ -43,19 +49,28 @@ function LoginPage() {
           <p className="text-secondary mb-4">Sign in to continue managing your goals.</p>
 
           <form onSubmit={handleSubmit}>
-            <label className="form-label">Username</label>
+            <label className="form-label" htmlFor="login-email">
+              Email
+            </label>
             <input
+              id="login-email"
+              type="email"
               className="form-control mb-3"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
               required
             />
-            <label className="form-label">Password</label>
+            <label className="form-label" htmlFor="login-password">
+              Password
+            </label>
             <input
+              id="login-password"
               type="password"
               className="form-control mb-3"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
               required
             />
             {errorMessage && <div className="alert alert-danger py-2">{errorMessage}</div>}
@@ -73,4 +88,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default Login;

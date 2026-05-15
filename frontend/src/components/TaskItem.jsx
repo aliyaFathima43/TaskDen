@@ -2,9 +2,9 @@ import { useState } from "react";
 
 function TaskItem({ task, onToggleStatus, onDelete, onSaveEdit, busyTaskId, celebratedTaskId }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(task.title);
+  const [draftTitle, setDraftTitle] = useState(task.task);
   const isBusy = busyTaskId === task.id;
-  const isDone = Boolean(task.status);
+  const isDone = Boolean(task.is_completed);
   const isCelebrating = celebratedTaskId === task.id;
 
   const handleSave = () => {
@@ -47,12 +47,11 @@ function TaskItem({ task, onToggleStatus, onDelete, onSaveEdit, busyTaskId, cele
             />
           ) : (
             <h6 className={`task-title mb-1 ${isDone ? "text-decoration-line-through text-muted" : ""}`}>
-              {task.title}
+              {task.task}
             </h6>
           )}
 
           <div className="d-flex align-items-center gap-2">
-            <small className="text-secondary">{new Date(task.created_at).toLocaleString()}</small>
             <span className={`task-status ${isDone ? "done" : ""}`}>
               {isDone ? "Completed" : "Pending"}
             </span>
@@ -68,7 +67,7 @@ function TaskItem({ task, onToggleStatus, onDelete, onSaveEdit, busyTaskId, cele
               <button
                 className="btn btn-outline-secondary btn-sm"
                 onClick={() => {
-                  setDraftTitle(task.title);
+                  setDraftTitle(task.task);
                   setIsEditing(false);
                 }}
                 disabled={isBusy}

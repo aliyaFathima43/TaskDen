@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 
-function SplashPage() {
-  const token = localStorage.getItem("todo_token");
-
+function SplashPage({ isAuthLoading, user }) {
+  const dashboardLink = user ? "/dashboard" : "/register";
+  const dashboardLabel = user ? "Open Dashboard" : "Get Started";
+  const loginLink = user ? "/dashboard" : "/login";
+  const loginLabel = user ? "Dashboard" : "Login";
+  
   return (
     <div className="splash-screen text-center">
       <div className="splash-glow splash-glow-one" />
@@ -22,12 +25,12 @@ function SplashPage() {
         </p>
 
         <div className="d-flex gap-3 justify-content-center flex-wrap">
-          <Link to={token ? "/dashboard" : "/register"} className="btn btn-primary px-4 py-2">
-            {token ? "Open Dashboard" : "Get Started"}
+          <Link to={dashboardLink} className={`btn btn-primary px-4 py-2 ${isAuthLoading ? "disabled" : ""}`}>
+            {isAuthLoading ? "Loading..." : dashboardLabel}
           </Link>
 
-          <Link to="/login" className="btn btn-outline-primary px-4 py-2">
-            Login
+          <Link to={loginLink} className={`btn btn-outline-primary px-4 py-2 ${isAuthLoading ? "disabled" : ""}`}>
+            {loginLabel}
           </Link>
         </div>
         <div className="splash-preview mt-4" aria-hidden="true">

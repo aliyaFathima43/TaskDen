@@ -1,16 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { addTask, deleteTask, getTasks, updateTask } from "../api";
-import TaskForm from "../components/TaskForm";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TaskFilters from "../components/TaskFilters";
+import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
+import { supabase } from "../supabaseClient";
 import { applyTheme, getInitialTheme, toggleTheme } from "../theme";
 
 const PROGRESS_KEY = "todo_last_progress";
 const PERFECT_DAYS_KEY = "todo_perfect_days";
 const PERFECT_SIGNATURE_KEY = "todo_last_perfect_signature";
 
-function DashboardPage() {
+function getTodoErrorMessage(error, fallbackMessage) {
+  if (error?.message?.toLowerCase().includes("row-level security")) {
+    return "Supabase RLS is blocking todos. Run the SQL in supabase-todos-rls.sql once in your Supabase SQL editor.";
+  }
+
+  return error?.message || fallbackMessage;
+}
+
+function getDisplayName(email) {
+  const rawName = String(email || "").split("@")[0];
+  const firstName = rawName.split(/[._-]/)[0].replace(/[^a-zA-Z]/g, "");
+
+  if (!firstName) {
+    return "User";
+  }
+
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+}
+
+function Dashboard({ user }) {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -23,37 +41,36 @@ function DashboardPage() {
   const [celebrationMessage, setCelebrationMessage] = useState("");
   const [showPerfectDay, setShowPerfectDay] = useState(false);
   const [perfectDays, setPerfectDays] = useState(Number(localStorage.getItem(PERFECT_DAYS_KEY) || "0"));
-  const navigate = useNavigate();
 
-  const currentUser = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem("todo_user") || "{}");
-    } catch (_error) {
-      return {};
-    }
-  }, []);
-
-  const loadTasks = async () => {
-    try {
-      setErrorMessage("");
-      const response = await getTasks();
-      setTasks(response.data);
-    } catch (error) {
-      if (error.response?.status === 401) {
-        localStorage.removeItem("todo_token");
-        localStorage.removeItem("todo_user");
-        navigate("/login", { replace: true });
-        return;
-      }
-      setErrorMessage(error.response?.data?.message || "Could not load tasks.");
-    } finally {
+  const fetchTasks = useCallback(async () => {
+    if (!user?.id) {
+      setTasks([]);
       setIsLoading(false);
+      return;
     }
-  };
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    const { data, error } = await supabase
+      .from("todos")
+      .select("id, task, is_completed, user_id")
+      .eq("user_id", user.id)
+      .order("id", { ascending: false });
+
+    if (error) {
+      setErrorMessage(getTodoErrorMessage(error, "Could not load tasks."));
+      setTasks([]);
+    } else {
+      setTasks(data ?? []);
+    }
+
+    setIsLoading(false);
+  }, [user?.id]);
 
   useEffect(() => {
-    loadTasks();
-  }, []);
+    fetchTasks();
+  }, [fetchTasks]);
 
   useEffect(() => {
     applyTheme(theme);
@@ -61,17 +78,17 @@ function DashboardPage() {
 
   const filteredTasks = useMemo(() => {
     if (filter === "completed") {
-      return tasks.filter((task) => Boolean(task.status));
+      return tasks.filter((task) => Boolean(task.is_completed));
     }
     if (filter === "pending") {
-      return tasks.filter((task) => !task.status);
+      return tasks.filter((task) => !task.is_completed);
     }
     return tasks;
   }, [tasks, filter]);
 
   const taskStats = useMemo(() => {
     const total = tasks.length;
-    const completed = tasks.filter((task) => Boolean(task.status)).length;
+    const completed = tasks.filter((task) => Boolean(task.is_completed)).length;
     const pending = total - completed;
     const progress = total ? Math.round((completed / total) * 100) : 0;
 
@@ -124,7 +141,10 @@ function DashboardPage() {
 
   useEffect(() => {
     if (taskStats.total > 0 && taskStats.progress === 100) {
-      const perfectSignature = tasks.map((task) => task.id).sort((first, second) => first - second).join("-");
+      const perfectSignature = tasks
+        .map((task) => task.id)
+        .sort((first, second) => Number(first) - Number(second))
+        .join("-");
       const previousSignature = localStorage.getItem(PERFECT_SIGNATURE_KEY);
       setShowPerfectDay(true);
       if (perfectSignature !== previousSignature) {
@@ -142,81 +162,136 @@ function DashboardPage() {
   }, [taskStats.progress, taskStats.total, tasks]);
 
   const handleCreateTask = async (title) => {
+    if (!user?.id) {
+      setErrorMessage("Please log in before adding tasks.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
-    try {
-      const response = await addTask({ title, status: false });
-      setTasks((previous) => [response.data, ...previous]);
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Could not create task.");
-    } finally {
-      setIsSubmitting(false);
+
+    const { data, error } = await supabase
+      .from("todos")
+      .insert({
+        task: title,
+        is_completed: false,
+        user_id: user.id
+      })
+      .select("id, task, is_completed, user_id")
+      .single();
+
+    if (error) {
+      setErrorMessage(getTodoErrorMessage(error, "Could not create task."));
+    } else if (data) {
+      setTasks((previous) => [data, ...previous]);
     }
+
+    setIsSubmitting(false);
   };
 
   const handleToggleStatus = async (task) => {
+    if (!user?.id) {
+      return;
+    }
+
     setBusyTaskId(task.id);
     setErrorMessage("");
-    try {
-      const response = await updateTask(task.id, { status: !task.status });
-      setTasks((previous) => previous.map((item) => (item.id === task.id ? response.data : item)));
-      if (!task.status && response.data.status) {
+
+    const { data, error } = await supabase
+      .from("todos")
+      .update({ is_completed: !task.is_completed })
+      .eq("id", task.id)
+      .eq("user_id", user.id)
+      .select("id, task, is_completed, user_id")
+      .single();
+
+    if (error) {
+      setErrorMessage(getTodoErrorMessage(error, "Could not update task status."));
+    } else if (data) {
+      setTasks((previous) => previous.map((item) => (item.id === task.id ? data : item)));
+      if (!task.is_completed && data.is_completed) {
         setCelebratedTaskId(task.id);
         setCelebrationMessage("Task completed. Beautiful progress.");
         window.setTimeout(() => setCelebratedTaskId(null), 1200);
         window.setTimeout(() => setCelebrationMessage(""), 2200);
       }
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Could not update task status.");
-    } finally {
-      setBusyTaskId(null);
     }
+
+    setBusyTaskId(null);
   };
 
   const handleSaveEdit = async (taskId, title) => {
+    if (!user?.id) {
+      return;
+    }
+
     setBusyTaskId(taskId);
     setErrorMessage("");
-    try {
-      const response = await updateTask(taskId, { title });
-      setTasks((previous) => previous.map((item) => (item.id === taskId ? response.data : item)));
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Could not update task.");
-    } finally {
-      setBusyTaskId(null);
+
+    const { data, error } = await supabase
+      .from("todos")
+      .update({ task: title })
+      .eq("id", taskId)
+      .eq("user_id", user.id)
+      .select("id, task, is_completed, user_id")
+      .single();
+
+    if (error) {
+      setErrorMessage(getTodoErrorMessage(error, "Could not update task."));
+    } else if (data) {
+      setTasks((previous) => previous.map((item) => (item.id === taskId ? data : item)));
     }
+
+    setBusyTaskId(null);
   };
 
   const handleDeleteTask = async (taskId) => {
+    if (!user?.id) {
+      return;
+    }
+
     setBusyTaskId(taskId);
     setErrorMessage("");
-    try {
-      await deleteTask(taskId);
+
+    const { error } = await supabase.from("todos").delete().eq("id", taskId).eq("user_id", user.id);
+
+    if (error) {
+      setErrorMessage(getTodoErrorMessage(error, "Could not delete task."));
+    } else {
       setTasks((previous) => previous.filter((task) => task.id !== taskId));
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Could not delete task.");
-    } finally {
-      setBusyTaskId(null);
     }
+
+    setBusyTaskId(null);
   };
 
   const handleClearCompleted = async () => {
-    const completedTasks = tasks.filter((task) => Boolean(task.status));
+    if (!user?.id) {
+      return;
+    }
+
+    const completedTasks = tasks.filter((task) => Boolean(task.is_completed));
     if (!completedTasks.length) {
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage("");
-    try {
-      await Promise.all(completedTasks.map((task) => deleteTask(task.id)));
-      setTasks((previous) => previous.filter((task) => !task.status));
+
+    const { error } = await supabase
+      .from("todos")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("is_completed", true);
+
+    if (error) {
+      setErrorMessage(getTodoErrorMessage(error, "Could not clear completed tasks."));
+    } else {
+      setTasks((previous) => previous.filter((task) => !task.is_completed));
       setCelebrationMessage("Completed tasks cleared. Fresh space, fresh focus.");
       window.setTimeout(() => setCelebrationMessage(""), 2200);
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Could not clear completed tasks.");
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setIsSubmitting(false);
   };
 
   const focusTaskInput = () => {
@@ -224,11 +299,15 @@ function DashboardPage() {
     window.setTimeout(() => document.getElementById("task-title")?.focus(), 120);
   };
 
-  const logout = () => {
-    localStorage.removeItem("todo_token");
-    localStorage.removeItem("todo_user");
-    navigate("/login", { replace: true });
+  const logout = async () => {
+    setErrorMessage("");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setErrorMessage(error.message || "Could not log out.");
+    }
   };
+
+  const displayName = getDisplayName(user?.email);
 
   return (
     <div className="app-shell">
@@ -287,7 +366,7 @@ function DashboardPage() {
       <div className="container py-4 py-md-5">
         <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
           <div>
-            <h1 className="h4 fw-bold mb-1">Welcome back, {currentUser.username || "User"}</h1>
+            <h1 className="h4 fw-bold mb-1">Welcome back, {displayName}</h1>
             <p className="text-secondary mb-0">{progressInsight}</p>
           </div>
           <div className="d-flex gap-2">
@@ -387,4 +466,4 @@ function DashboardPage() {
   );
 }
 
-export default DashboardPage;
+export default Dashboard;
