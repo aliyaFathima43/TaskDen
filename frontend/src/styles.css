@@ -1755,3 +1755,57 @@ body[data-theme="dark"] .perfect-day-card {
     transition-duration: 0.001ms !important;
   }
 }
+.add-task-btn {
+  width: 52px;
+  height: 52px;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.streak-card {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 24px;
+  padding: 20px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25);
+}
+
+.streak-label {
+  opacity: 0.85;
+  font-size: 0.9rem;
+}
+
+.streak-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.streak-badge {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 10px 16px;
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  font-weight: 600;
+}
+.focus-card {
+  background: linear-gradient(135deg, #1e1e2f, #2b2b45);
+  border-radius: 24px;
+  padding: 24px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.focus-label {
+  opacity: 0.8;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+}
+
+.focus-time {
+  font-size: 4rem;
+  font-weight: 700;
+  margin-top: 10px;
+}

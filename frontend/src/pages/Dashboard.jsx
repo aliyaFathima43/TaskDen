@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+
+import FocusTimer from "../components/FocusTimer";import { useCallback, useEffect, useMemo, useState } from "react";
 import TaskFilters from "../components/TaskFilters";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
@@ -411,6 +412,20 @@ function Dashboard({ user }) {
         </section>
 
         <div className="row g-3 mb-4">
+          <div className="streak-card mb-4">
+  <div className="d-flex justify-content-between align-items-center">
+    <div>
+      <p className="streak-label mb-1">Current Streak</p>
+      <h3 className="streak-value mb-0">
+        🔥 {perfectDays} Day{perfectDays === 1 ? "" : "s"}
+      </h3>
+    </div>
+
+    <div className="streak-badge">
+      Keep Going
+    </div>
+  </div>
+</div>
           <div className="col-4">
             <div className="stat-card">
               <p className="stat-label">Total</p>
@@ -432,6 +447,7 @@ function Dashboard({ user }) {
         </div>
 
         <div className="mx-auto dashboard-card">
+          <FocusTimer />
           <TaskForm onSubmit={handleCreateTask} isSubmitting={isSubmitting} />
           <TaskFilters activeFilter={filter} onChange={setFilter} />
           {taskStats.completed > 0 && (
