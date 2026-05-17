@@ -50,7 +50,7 @@ function TaskForm({ onSubmit, isSubmitting }) {
           id="task-title"
           type="text"
           className="form-control rounded-pill px-3 py-2"
-          placeholder="What do you need to do?"
+          placeholder="Type your task, then tap +"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           disabled={isSubmitting}

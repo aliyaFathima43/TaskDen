@@ -1,4 +1,4 @@
-
+import MotivationCard from "../components/MotivationCard";
 import FocusTimer from "../components/FocusTimer";import { useCallback, useEffect, useMemo, useState } from "react";
 import TaskFilters from "../components/TaskFilters";
 import TaskForm from "../components/TaskForm";
@@ -447,6 +447,7 @@ function Dashboard({ user }) {
         </div>
 
         <div className="mx-auto dashboard-card">
+          <MotivationCard />
           <FocusTimer />
           <TaskForm onSubmit={handleCreateTask} isSubmitting={isSubmitting} />
           <TaskFilters activeFilter={filter} onChange={setFilter} />
