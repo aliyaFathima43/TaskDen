@@ -18,17 +18,23 @@ const QUICK_IDEAS = [
 
 function TaskForm({ onSubmit, isSubmitting }) {
   const [title, setTitle] = useState("");
-  const [priority, setPriority] = useState("Medium");
+  const [priority, setPriority] = useState("");
   const [showPriorityReminder, setShowPriorityReminder] = useState(false);
   const prioritySelectRef = useRef(null);
 
-  const submitTitle = (taskTitle) => {
+  const submitTitle = (taskTitle, selectedPriority = priority) => {
     const trimmedTitle = taskTitle.trim();
 
     if (!trimmedTitle) return;
+    if (!selectedPriority) {
+      setShowPriorityReminder(true);
+      window.setTimeout(() => prioritySelectRef.current?.focus(), 0);
+      return;
+    }
 
-    onSubmit(trimmedTitle, priority);
+    onSubmit(trimmedTitle, selectedPriority);
     setTitle("");
+    setPriority("");
     setShowPriorityReminder(false);
   };
 
@@ -48,8 +54,30 @@ function TaskForm({ onSubmit, isSubmitting }) {
     }
 
     event.preventDefault();
+    if (priority) {
+      submitTitle(trimmedTitle, priority);
+      return;
+    }
+
     setShowPriorityReminder(true);
     window.setTimeout(() => prioritySelectRef.current?.focus(), 0);
+  };
+
+  const handleQuickIdea = (idea) => {
+    setTitle(idea);
+    setPriority("");
+    setShowPriorityReminder(true);
+    window.setTimeout(() => prioritySelectRef.current?.focus(), 0);
+  };
+
+  const handlePriorityChange = (event) => {
+    const selectedPriority = event.target.value;
+    setPriority(selectedPriority);
+    setShowPriorityReminder(false);
+
+    if (title.trim()) {
+      submitTitle(title, selectedPriority);
+    }
   };
 
   return (
@@ -97,16 +125,14 @@ function TaskForm({ onSubmit, isSubmitting }) {
       showPriorityReminder ? "is-priority-reminder" : ""
     }`}
     value={priority}
-    onChange={(e) => {
-      setPriority(e.target.value);
-      setShowPriorityReminder(false);
-    }}
+    onChange={handlePriorityChange}
     onBlur={() => setShowPriorityReminder(false)}
     disabled={isSubmitting}
   >
-    <option value="High">🟥 High Priority</option>
-    <option value="Medium">🟨 Medium Priority</option>
-    <option value="Low">🟩 Low Priority</option>
+    <option value="">Choose priority</option>
+    <option value="High">High Priority</option>
+    <option value="Medium">Medium Priority</option>
+    <option value="Low">Low Priority</option>
   </select>
 </div>
 
@@ -116,7 +142,7 @@ function TaskForm({ onSubmit, isSubmitting }) {
             className="quick-idea"
             type="button"
             key={idea}
-            onClick={() => submitTitle(idea)}
+            onClick={() => handleQuickIdea(idea)}
             disabled={isSubmitting}
           >
             {idea}
