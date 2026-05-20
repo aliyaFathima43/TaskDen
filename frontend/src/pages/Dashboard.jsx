@@ -1,5 +1,6 @@
 import MotivationCard from "../components/MotivationCard";
-import FocusTimer from "../components/FocusTimer";import { useCallback, useEffect, useMemo, useState } from "react";
+import FocusTimer from "../components/FocusTimer";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TaskFilters from "../components/TaskFilters";
 import TaskForm from "../components/TaskForm";
 import TaskList from "../components/TaskList";
@@ -52,10 +53,9 @@ function Dashboard({ user }) {
 
     setIsLoading(true);
     setErrorMessage("");
-
     const { data, error } = await supabase
       .from("todos")
-      .select("id, task, is_completed, user_id")
+      .select("id, task, priority, is_completed, user_id")
       .eq("user_id", user.id)
       .order("id", { ascending: false });
 
@@ -162,7 +162,7 @@ function Dashboard({ user }) {
     return undefined;
   }, [taskStats.progress, taskStats.total, tasks]);
 
-  const handleCreateTask = async (title) => {
+  const handleCreateTask = async (title, priority = "Medium") => {
     if (!user?.id) {
       setErrorMessage("Please log in before adding tasks.");
       return;
@@ -173,14 +173,16 @@ function Dashboard({ user }) {
 
     const { data, error } = await supabase
       .from("todos")
-      .insert({
-        task: title,
-        is_completed: false,
-        user_id: user.id
-      })
-      .select("id, task, is_completed, user_id")
+      .insert([
+        {
+          task: title,
+          priority: priority || "Medium",
+          is_completed: false,
+          user_id: user.id,
+        },
+      ])
+      .select("id, task, priority, is_completed, user_id")
       .single();
-
     if (error) {
       setErrorMessage(getTodoErrorMessage(error, "Could not create task."));
     } else if (data) {
@@ -203,7 +205,7 @@ function Dashboard({ user }) {
       .update({ is_completed: !task.is_completed })
       .eq("id", task.id)
       .eq("user_id", user.id)
-      .select("id, task, is_completed, user_id")
+      .select("id, task, priority, is_completed, user_id")
       .single();
 
     if (error) {
@@ -221,7 +223,7 @@ function Dashboard({ user }) {
     setBusyTaskId(null);
   };
 
-  const handleSaveEdit = async (taskId, title) => {
+  const handleSaveEdit = async (taskId, title, priority = "Medium") => {
     if (!user?.id) {
       return;
     }
@@ -231,10 +233,10 @@ function Dashboard({ user }) {
 
     const { data, error } = await supabase
       .from("todos")
-      .update({ task: title })
+      .update({ task: title, priority: priority || "Medium" })
       .eq("id", taskId)
       .eq("user_id", user.id)
-      .select("id, task, is_completed, user_id")
+      .select("id, task, priority, is_completed, user_id")
       .single();
 
     if (error) {
@@ -412,7 +414,7 @@ function Dashboard({ user }) {
         </section>
 
         <div className="row g-3 mb-4">
-          <div className="streak-card mb-4">
+          <div className={`streak-card mb-4 streak-${perfectDays}`}>
   <div className="d-flex justify-content-between align-items-center">
     <div>
       <p className="streak-label mb-1">Current Streak</p>
@@ -422,8 +424,11 @@ function Dashboard({ user }) {
     </div>
 
     <div className="streak-badge">
-      Keep Going
-    </div>
+  {perfectDays === 0 && "Start today 🌱"}
+  {perfectDays > 0 && perfectDays < 3 && "Getting started ✨"}
+  {perfectDays >= 3 && perfectDays < 7 && "Building momentum 🔥"}
+  {perfectDays >= 7 && "Unstoppable 💀🔥"}
+</div>
   </div>
 </div>
           <div className="col-4">

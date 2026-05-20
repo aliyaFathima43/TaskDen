@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function TaskItem({ task, onToggleStatus, onDelete, onSaveEdit, busyTaskId, celebratedTaskId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(task.task);
+  const [draftPriority, setDraftPriority] = useState(task.priority || "Medium");
   const isBusy = busyTaskId === task.id;
   const isDone = Boolean(task.is_completed);
   const isCelebrating = celebratedTaskId === task.id;
+
+  useEffect(() => {
+    setDraftTitle(task.task);
+    setDraftPriority(task.priority || "Medium");
+  }, [task.task, task.priority]);
 
   const handleSave = () => {
     const trimmedTitle = draftTitle.trim();
     if (!trimmedTitle) {
       return;
     }
-    onSaveEdit(task.id, trimmedTitle);
+    onSaveEdit(task.id, trimmedTitle, draftPriority);
     setIsEditing(false);
   };
 
@@ -37,25 +43,43 @@ function TaskItem({ task, onToggleStatus, onDelete, onSaveEdit, busyTaskId, cele
         />
 
         <div className="flex-grow-1">
-          {isEditing ? (
-            <input
-              type="text"
-              className="form-control form-control-sm mb-2"
-              value={draftTitle}
-              onChange={(event) => setDraftTitle(event.target.value)}
-              disabled={isBusy}
-            />
-          ) : (
-            <h6 className={`task-title mb-1 ${isDone ? "text-decoration-line-through text-muted" : ""}`}>
-              {task.task}
-            </h6>
-          )}
+         {isEditing ? (
+  <div className="edit-task-fields">
+    <input
+      type="text"
+      className="form-control form-control-sm"
+      value={draftTitle}
+      onChange={(event) => setDraftTitle(event.target.value)}
+      disabled={isBusy}
+    />
+    <select
+      className="form-select form-select-sm priority-edit-select"
+      value={draftPriority}
+      onChange={(event) => setDraftPriority(event.target.value)}
+      disabled={isBusy}
+    >
+      <option value="High">High Priority</option>
+      <option value="Medium">Medium Priority</option>
+      <option value="Low">Low Priority</option>
+    </select>
+  </div>
+) : (
+  <>
+    <span
+      className={`priority-badge priority-${task.priority?.toLowerCase() || "medium"}`}
+    >
+      {task.priority || "Medium"}
+    </span>
 
-          <div className="d-flex align-items-center gap-2">
-            <span className={`task-status ${isDone ? "done" : ""}`}>
-              {isDone ? "Completed" : "Pending"}
-            </span>
-          </div>
+    <h6
+      className={`task-title mb-1 ${
+        isDone ? "text-decoration-line-through text-muted" : ""
+      }`}
+    >
+      {task.task}
+    </h6>
+  </>
+)}
         </div>
 
         <div className="d-flex gap-2">
@@ -68,6 +92,7 @@ function TaskItem({ task, onToggleStatus, onDelete, onSaveEdit, busyTaskId, cele
                 className="btn btn-outline-secondary btn-sm"
                 onClick={() => {
                   setDraftTitle(task.task);
+                  setDraftPriority(task.priority || "Medium");
                   setIsEditing(false);
                 }}
                 disabled={isBusy}

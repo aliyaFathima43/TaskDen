@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const QUICK_IDEAS = [
   "Study",
@@ -18,19 +18,38 @@ const QUICK_IDEAS = [
 
 function TaskForm({ onSubmit, isSubmitting }) {
   const [title, setTitle] = useState("");
+  const [priority, setPriority] = useState("Medium");
+  const [showPriorityReminder, setShowPriorityReminder] = useState(false);
+  const prioritySelectRef = useRef(null);
 
   const submitTitle = (taskTitle) => {
     const trimmedTitle = taskTitle.trim();
 
     if (!trimmedTitle) return;
 
-    onSubmit(trimmedTitle);
+    onSubmit(trimmedTitle, priority);
     setTitle("");
+    setShowPriorityReminder(false);
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
     submitTitle(title);
+  };
+
+  const handleTitleKeyDown = (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      return;
+    }
+
+    event.preventDefault();
+    setShowPriorityReminder(true);
+    window.setTimeout(() => prioritySelectRef.current?.focus(), 0);
   };
 
   return (
@@ -52,7 +71,13 @@ function TaskForm({ onSubmit, isSubmitting }) {
           className="form-control rounded-pill px-3 py-2"
           placeholder="Type your task, then tap +"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            if (showPriorityReminder) {
+              setShowPriorityReminder(false);
+            }
+          }}
+          onKeyDown={handleTitleKeyDown}
           disabled={isSubmitting}
         />
 
@@ -65,6 +90,25 @@ function TaskForm({ onSubmit, isSubmitting }) {
   +
 </button>
       </div>
+      <div className="mt-3">
+  <select
+    ref={prioritySelectRef}
+    className={`form-select rounded-pill bg-white text-dark priority-select ${
+      showPriorityReminder ? "is-priority-reminder" : ""
+    }`}
+    value={priority}
+    onChange={(e) => {
+      setPriority(e.target.value);
+      setShowPriorityReminder(false);
+    }}
+    onBlur={() => setShowPriorityReminder(false)}
+    disabled={isSubmitting}
+  >
+    <option value="High">🟥 High Priority</option>
+    <option value="Medium">🟨 Medium Priority</option>
+    <option value="Low">🟩 Low Priority</option>
+  </select>
+</div>
 
       <div className="quick-ideas d-flex flex-wrap gap-2 mt-3">
         {QUICK_IDEAS.map((idea) => (
