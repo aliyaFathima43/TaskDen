@@ -1,47 +1,41 @@
-# 🚀 TaskDen - Full Stack To-Do App
+# 📝 TaskDen - Smart Todo Application
 
-A modern full-stack task management application built with **React, Node.js, Express, and MySQL**.
+## 🚀 Overview
+TaskDen is a full-stack task management web application designed to help users organize their daily tasks efficiently with a clean UI and productivity-focused features.
 
 ---
 
 ## ✨ Features
-
-- 🔐 User authentication (login/register)
-- 📝 Add, edit, delete tasks
-- ✅ Mark tasks as completed/pending
-- 🔍 Filter tasks (All / Completed / Pending)
-- 📱 Fully responsive UI
-- ⚡ REST API backend with database integration
+- 🔐 User Authentication (Login/Register system)
+- 📝 Create, Update, Delete tasks (CRUD operations)
+- 📊 Task organization and management system
+- 🔥 Streak tracking system to improve consistency
+- ⏱ Focus/Timer feature to improve productivity
+- 📱 Responsive design for mobile and desktop usage
 
 ---
 
 ## 🛠 Tech Stack
-
-**Frontend:**
-- React
-- Bootstrap
-
-**Backend:**
-- Node.js
-- Express.js
-
-**Database:**
-- MySQL
+- JavaScript
+- HTML
+- CSS
+- (Add backend/DB here if used: Node.js / MongoDB etc.)
 
 ---
 
-## ⚙️ Backend Setup
+## 🎯 Key Highlights
+- Deployed and functional across devices  
+- Built with focus on real-world productivity use case  
+- Includes gamified productivity (streak system)  
+- Clean and minimal UI for better user experience  
 
-```bash
-cd backend
-npm install
-## 📸 Screenshots
+---
 
-### 🏷️ TaskDen Home
-![TaskDen](./assets/TaskDen.png)
+## 📌 Status
+✔ Completed & Deployed
 
-### 🔐 Login Page
-![Login](./assets/login.png)
+---
 
-### 📊 Dashboard
-![Dashboard](./assets/Dashboard.png)
+## 👩‍💻 Developer
+Aliya Fathima  
+AIML Student | Aspiring AI/ML & Full Stack Developer
